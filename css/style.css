@@ -134,6 +134,7 @@ body {
     justify-content: space-between;
     align-items: center;
     font-size: 0.9em;
+    position: relative;
 }
 
 .header-left, .header-right {
@@ -141,9 +142,15 @@ body {
     gap: 15px;
 }
 
+/* 绝对定位使标题严格居中，不受左右信息宽度差影响 */
 .header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     font-weight: bold;
     color: #00ffff;
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 #day-display { color: #ffaa00; }
@@ -153,8 +160,10 @@ body {
 #reputation-display { color: #ff88ff; }
 
 #game-canvas {
-    flex: 1;
-    width: 100%;
+    /* 不能用 flex:1，否则会覆盖 resize() 算出的高度，导致画面被纵向拉伸变形 */
+    flex: 0 0 auto;
+    max-width: 100%;
+    margin: auto; /* 在剩余空间内垂直居中 */
     background: #0a0a1a;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -504,6 +513,26 @@ body {
 
 /* 响应式 */
 @media (max-width: 600px) {
+    /* 竖屏：容器贴合内容高度，避免画布上下大片留黑 */
+    #game-container {
+        height: auto;
+        min-height: 100dvh;
+        max-height: none;
+    }
+
+    #game-screen {
+        position: relative;
+        min-height: 100dvh;
+        /* 安全区：避开刘海与 Home 指示条 */
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* 竖屏下 2:1 画布上下留黑属正常 letterbox，放大裁切会切掉门与收银台，故不放大 */
+    #game-canvas {
+        max-width: 100%;
+    }
+
     .title-logo h1 {
         font-size: 2em;
         letter-spacing: 2px;
@@ -523,6 +552,11 @@ body {
         padding: 6px 8px;
         flex-wrap: wrap;
         gap: 4px;
+    }
+
+    /* 窄屏空间不足，隐藏中间标题避免与左右信息重叠 */
+    .header-center {
+        display: none;
     }
 
     .header-left, .header-right {
