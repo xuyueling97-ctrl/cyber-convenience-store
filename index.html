@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>赛博便利店：24小时营业</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- 主菜单 -->
+        <div id="main-menu" class="screen active">
+            <div class="title-logo">
+                <h1>赛博便利店</h1>
+                <p class="subtitle">24小时营业</p>
+            </div>
+            <div class="menu-buttons">
+                <button class="menu-btn" id="btn-new-game">开始新游戏</button>
+                <button class="menu-btn" id="btn-continue">继续游戏</button>
+                <button class="menu-btn" id="btn-help">游戏说明</button>
+            </div>
+            <div class="version">v1.0 | 赛博城市 © 2099</div>
+        </div>
+
+        <!-- 游戏主界面 -->
+        <div id="game-screen" class="screen">
+            <div id="game-header">
+                <div class="header-left">
+                    <span id="day-display">第1天</span>
+                    <span id="time-display">06:00</span>
+                    <span id="period-display">☀️ 白天</span>
+                </div>
+                <div class="header-center">
+                    <span id="shop-name">我的便利店</span>
+                </div>
+                <div class="header-right">
+                    <span id="money-display">💰 ¥1000</span>
+                    <span id="reputation-display">⭐ 0</span>
+                </div>
+            </div>
+            
+            <canvas id="game-canvas"></canvas>
+            
+            <div id="game-controls">
+                <button class="control-btn" id="btn-inventory">📦 库存</button>
+                <button class="control-btn" id="btn-upgrade">⬆️ 升级</button>
+                <button class="control-btn" id="btn-stats">📊 统计</button>
+                <button class="control-btn" id="btn-pause">⏸️ 暂停</button>
+            </div>
+        </div>
+
+        <!-- 弹窗容器 -->
+        <div id="modal-container" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">标题</h3>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- 动态内容 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 通知提示 -->
+        <div id="notification" class="notification hidden"></div>
+
+        <!-- 对话气泡 -->
+        <div id="dialog-bubble" class="dialog-bubble hidden">
+            <span id="dialog-text"></span>
+        </div>
+
+        <!-- 游戏说明 -->
+        <div id="help-screen" class="screen">
+            <div class="help-content">
+                <h2>📖 游戏说明</h2>
+                <div class="help-section">
+                    <h3>🎮 基本操作</h3>
+                    <p>• 点击货架上的商品进行进货和定价</p>
+                    <p>• 点击顾客可以查看他们的需求</p>
+                    <p>• 使用底部按钮管理库存、升级店铺</p>
+                </div>
+                <div class="help-section">
+                    <h3>💡 经营技巧</h3>
+                    <p>• 不同时段有不同顾客光临</p>
+                    <p>• 合理定价，太高会吓跑顾客</p>
+                    <p>• 及时补货，缺货会影响声誉</p>
+                    <p>• 升级店铺解锁更多商品和设施</p>
+                </div>
+                <div class="help-section">
+                    <h3>🌙 昼夜循环</h3>
+                    <p>• 白天：普通人类顾客为主</p>
+                    <p>• 夜晚：机器人、外星人出没</p>
+                    <p>• 深夜：可能出现神秘事件...</p>
+                </div>
+                <div class="help-section">
+                    <h3>🏆 目标</h3>
+                    <p>• 经营你的便利店，成为赛博城的传奇！</p>
+                    <p>• 解锁所有商品和成就</p>
+                    <p>• 发现隐藏的故事和结局</p>
+                </div>
+                <button class="menu-btn" id="btn-back-menu">返回</button>
+            </div>
+        </div>
+
+        <!-- 结局画面 -->
+        <div id="ending-screen" class="screen">
+            <div class="ending-content">
+                <h2 id="ending-title">游戏结局</h2>
+                <p id="ending-text"></p>
+                <div id="ending-stats"></div>
+                <button class="menu-btn" id="btn-restart">重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本加载 -->
+    <script src="js/data.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/sprites.js"></script>
+    <script src="js/time.js"></script>
+    <script src="js/customer.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/events.js"></script>
+    <script src="js/upgrades.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/save.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

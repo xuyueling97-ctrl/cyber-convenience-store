@@ -1,0 +1,21 @@
+# 本地测试与备份（不上传）
+_test_core.js
+_backup_before_fix/
+
+# CLI 自动存档与本地配置（含对话记录，不上传）
+.codely-cli/
+
+# 依赖与构建产物
+node_modules/
+package-lock.json
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# 日志
+*.log
+npm-debug.log*
