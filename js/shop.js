@@ -24,6 +24,16 @@ class ShopSystem {
         
         // 解锁的商品
         this.unlockedProducts = ['noodles', 'burger', 'onigiri', 'cola'];
+
+        // 升级带来的持续效果（累加值）
+        this.upgradeEffects = {
+            customerRate: 0,
+            customerPatience: 0,
+            checkoutSpeed: 0,
+            theftReduction: 0,
+            vipCustomerRate: 0,
+            alienRate: 0
+        };
         
         // 初始化库存
         this.initInventory();
@@ -47,6 +57,14 @@ class ShopSystem {
         this.inventory = {};
         this.prices = {};
         this.unlockedProducts = ['noodles', 'burger', 'onigiri', 'cola'];
+        this.upgradeEffects = {
+            customerRate: 0,
+            customerPatience: 0,
+            checkoutSpeed: 0,
+            theftReduction: 0,
+            vipCustomerRate: 0,
+            alienRate: 0
+        };
         this.stats = {
             totalSales: 0,
             totalIncome: 0,
@@ -211,6 +229,7 @@ class ShopSystem {
             inventory: { ...this.inventory },
             prices: { ...this.prices },
             unlockedProducts: [...this.unlockedProducts],
+            upgradeEffects: { ...this.upgradeEffects },
             stats: { ...this.stats }
         };
     }
@@ -224,6 +243,14 @@ class ShopSystem {
         this.inventory = state.inventory || {};
         this.prices = state.prices || {};
         this.unlockedProducts = state.unlockedProducts || ['noodles', 'burger', 'onigiri', 'cola'];
+        this.upgradeEffects = state.upgradeEffects || {
+            customerRate: 0,
+            customerPatience: 0,
+            checkoutSpeed: 0,
+            theftReduction: 0,
+            vipCustomerRate: 0,
+            alienRate: 0
+        };
         this.stats = state.stats || this.stats;
     }
 
@@ -232,6 +259,18 @@ class ShopSystem {
         if (effect.shelfSpace) {
             this.shelfSpace += effect.shelfSpace;
         }
+        // 其余持续效果累加，供顾客系统/事件系统查询
+        ['customerRate', 'customerPatience', 'checkoutSpeed',
+         'theftReduction', 'vipCustomerRate', 'alienRate'].forEach(key => {
+            if (effect[key]) {
+                this.upgradeEffects[key] += effect[key];
+            }
+        });
+    }
+
+    // 获取某项升级效果的累计值
+    getUpgradeEffect(key) {
+        return this.upgradeEffects[key] || 0;
     }
 }
 

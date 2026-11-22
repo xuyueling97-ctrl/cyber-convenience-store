@@ -562,6 +562,13 @@ const GameData = {
             name: '完美结局',
             desc: '你解锁了所有成就，成为了传说中的便利店之王！',
             condition: (stats) => stats.achievementsUnlocked >= 10
+        },
+        // 轻量收尾：以上目标都未达成时，经营满 15 天也给一个明确终点
+        daysEnding: {
+            id: 'daysEnding',
+            name: '十五日营业结算',
+            desc: '你坚持营业了 15 天，这家小店在赛博城站稳了脚跟。',
+            condition: (stats) => stats.daysPlayed >= 15
         }
     }
 };

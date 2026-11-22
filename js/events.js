@@ -129,6 +129,12 @@ class EventSystem {
 
     // 偷窃随机商品
     stealRandomProduct() {
+        // 安保机器人升级可降低被偷概率
+        const reduction = Shop.getUpgradeEffect('theftReduction');
+        if (reduction > 0 && Utils.chance(reduction)) {
+            return; // 成功阻止偷窃
+        }
+        
         const products = Shop.getAllProducts();
         const inStock = products.filter(p => p.stock > 0);
         
@@ -146,6 +152,45 @@ class EventSystem {
     // 获取事件历史
     getEventHistory() {
         return this.eventHistory;
+    }
+
+    // 恢复事件历史（读档时调用）
+    loadEventHistory(history) {
+        this.eventHistory = Array.isArray(history) ? history : [];
+    }
+
+    // 获取状态（供存档使用）
+    getState() {
+        return {
+            activeEvents: this.activeEvents.map(e => ({
+                id: e.id, duration: e.duration, startTime: e.startTime, startDay: e.startDay
+            })),
+            eventHistory: this.eventHistory
+        };
+    }
+
+    // 加载状态（读档时恢复事件）
+    loadState(state) {
+        if (!state) return;
+        
+        // 恢复历史
+        this.loadEventHistory(state.eventHistory);
+        
+        // 恢复进行中的事件（按剩余时长重建）
+        this.activeEvents = [];
+        if (Array.isArray(state.activeEvents)) {
+            state.activeEvents.forEach(saved => {
+                const def = GameData.events[saved.id];
+                if (def && saved.duration > 0) {
+                    this.activeEvents.push({
+                        ...def,
+                        duration: saved.duration,
+                        startTime: saved.startTime,
+                        startDay: saved.startDay
+                    });
+                }
+            });
+        }
     }
 
     // 手动触发事件（用于特殊事件）

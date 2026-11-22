@@ -3,7 +3,7 @@ class CustomerSystem {
     constructor() {
         this.customers = [];
         this.maxCustomers = 5;
-        this.spawnRate = 0.1; // 每秒生成概率（基础值）
+        this.spawnRate = 0.25; // 每秒生成概率（基础值，约 4 秒来一位顾客）
         this.spawnTimer = 0;
         this.spawnInterval = 60; // 每60帧（约1秒）检查一次生成
         this.noPower = false; // 停电时不生成新顾客
@@ -35,10 +35,11 @@ class CustomerSystem {
     }
 
     update(deltaTime, shop) {
-        // 生成新顾客（考虑事件和停电）
+        // 生成新顾客（考虑事件、停电与升级效果）
         this.spawnTimer++;
         const rateModifier = Events.getEffectModifier('customerRate');
-        const effectiveSpawnRate = this.spawnRate * rateModifier;
+        const upgradeRate = 1 + shop.getUpgradeEffect('customerRate');
+        const effectiveSpawnRate = Utils.clamp(this.spawnRate * rateModifier * upgradeRate, 0, 0.95);
         
         if (!this.noPower 
             && this.spawnTimer >= this.spawnInterval 
@@ -66,9 +67,14 @@ class CustomerSystem {
         const isNight = Time.isNight();
         const types = Object.values(GameData.customerTypes);
         
-        // 计算权重
+        // 计算权重（叠加升级效果：VIP休息室提升高预算客、传送门提升外星客）
+        const vipBoost = 1 + shop.getUpgradeEffect('vipCustomerRate');
+        const alienBoost = 1 + shop.getUpgradeEffect('alienRate');
         const weights = types.map(type => {
-            return isNight ? type.spawnWeight.night : type.spawnWeight.day;
+            let w = isNight ? type.spawnWeight.night : type.spawnWeight.day;
+            if (type.id === 'hacker') w *= vipBoost;
+            if (type.id === 'alien') w *= alienBoost;
+            return w;
         });
         
         // 加权随机选择
@@ -94,8 +100,8 @@ class CustomerSystem {
             targetY: this.waypoints.entrance.y,
             speed: 1 + Math.random() * 0.5,
             state: 'entering', // entering, browsing, goingToRegister, checkout, leaving
-            patience: selectedType.patience,
-            maxPatience: selectedType.patience,
+            patience: selectedType.patience * (1 + shop.getUpgradeEffect('customerPatience')),
+            maxPatience: selectedType.patience * (1 + shop.getUpgradeEffect('customerPatience')),
             budget: Utils.randomInt(selectedType.budget[0], selectedType.budget[1]),
             wantedProducts: [],
             purchasedProducts: [],
@@ -246,16 +252,24 @@ class CustomerSystem {
         const product = customer.wantedProducts[0];
         const stock = shop.getProductStock(product.id);
         
-        // 预算已在 selectWantedProducts 阶段校验并预扣，此处只需确认有库存
-        if (stock > 0) {
+        // 预算已在 selectWantedProducts 阶段预扣；若玩家在浏览期间抬价超出剩余预算，
+        // 则放弃该商品（避免按超出顾客预算的新价强行成交）
+        const currentPrice = shop.prices[product.id] !== undefined
+            ? shop.prices[product.id] : product.price;
+        
+        if (stock > 0 && currentPrice <= customer.budget) {
             // 购买商品
             customer.purchasedProducts.push(product);
             customer.wantedProducts.shift();
+            customer.budget -= currentPrice;
             
             // 随机对话
             if (Utils.chance(0.3)) {
                 this.showCustomerDialog(customer, '不错，这个我要了');
             }
+        } else {
+            // 太贵或没货，放弃这件商品
+            customer.wantedProducts.shift();
         }
     }
 
@@ -274,8 +288,10 @@ class CustomerSystem {
     }
 
     updateCheckout(customer, shop) {
-        // 结账过程
-        if (customer.stateTimer >= 60) { // 1秒结账
+        // 结账过程（自动收银机升级可缩短结账时间）
+        const checkoutSpeed = shop.getUpgradeEffect('checkoutSpeed');
+        const checkoutFrames = Math.max(20, Math.round(60 * (1 - checkoutSpeed)));
+        if (customer.stateTimer >= checkoutFrames) {
             this.completePurchase(customer, shop);
             // 保存情绪状态（completePurchase可能设置happy/angry）
             customer.emotion = customer.state; // 保存 happy/angry/正常离开
@@ -363,7 +379,7 @@ class CustomerSystem {
 
     // 设置生成速率
     setSpawnRate(rate) {
-        this.spawnRate = Utils.clamp(rate, 0.01, 0.1);
+        this.spawnRate = Utils.clamp(rate, 0.01, 0.6);
     }
 
     // 设置最大顾客数

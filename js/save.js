@@ -25,7 +25,7 @@ class SaveManager {
                 shop: Shop.getState(),
                 time: Time.getState(),
                 upgrades: Upgrades.getState(),
-                events: Events.getEventHistory()
+                events: Events.getState()
             };
 
             localStorage.setItem(this.storageKey, JSON.stringify(saveData));
@@ -53,6 +53,7 @@ class SaveManager {
             if (saveData.shop) Shop.loadState(saveData.shop);
             if (saveData.time) Time.loadState(saveData.time);
             if (saveData.upgrades) Upgrades.loadState(saveData.upgrades);
+            if (saveData.events) Events.loadState(saveData.events);
 
             return true;
         } catch (e) {
