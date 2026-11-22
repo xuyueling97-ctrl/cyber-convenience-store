@@ -42,8 +42,10 @@ class RendererSystem {
         // 可用高度需扣除顶部 HUD 与底部按钮栏，避免画布溢出
         const header = document.getElementById('game-header');
         const controls = document.getElementById('game-controls');
+        const rotateHint = document.getElementById('rotate-hint');
         const chromeHeight = (header ? header.offsetHeight : 0) +
-                             (controls ? controls.offsetHeight : 0);
+                             (controls ? controls.offsetHeight : 0) +
+                             (rotateHint ? rotateHint.offsetHeight : 0);
         
         const availWidth = container.clientWidth;
         const availHeight = Math.max(0, container.clientHeight - chromeHeight);

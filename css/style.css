@@ -179,6 +179,47 @@ body {
     gap: 10px;
 }
 
+/* 竖屏横屏引导（默认隐藏，仅竖屏小屏显示） */
+#rotate-hint {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    margin: 8px auto;
+    max-width: 92%;
+    background: rgba(0, 255, 255, 0.08);
+    border: 1px solid #00ffff44;
+    border-radius: 6px;
+    color: #88ffff;
+    font-size: 0.78em;
+    text-align: center;
+    line-height: 1.5;
+}
+
+#rotate-hint .rotate-icon {
+    font-size: 1.6em;
+    animation: rotatePhone 2.5s ease-in-out infinite;
+}
+
+#rotate-hint p {
+    margin: 0;
+    font-weight: bold;
+    color: #00ffff;
+}
+
+#rotate-hint span {
+    display: block;
+    font-size: 0.9em;
+    color: #77aabb;
+    margin-top: 2px;
+}
+
+@keyframes rotatePhone {
+    0%, 60% { transform: rotate(0deg); }
+    80%, 100% { transform: rotate(90deg); }
+}
+
 .control-btn {
     flex: 1;
     padding: 12px 8px;
@@ -633,6 +674,13 @@ body {
 
     .ending-content {
         padding: 20px;
+    }
+}
+
+/* 竖屏手机：提示旋转横屏（横屏与桌面保持隐藏） */
+@media (max-width: 600px) and (orientation: portrait) {
+    #rotate-hint {
+        display: flex;
     }
 }
 
