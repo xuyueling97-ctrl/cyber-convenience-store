@@ -39,18 +39,34 @@ class RendererSystem {
         const container = this.canvas.parentElement;
         const aspectRatio = 2; // 2:1 宽高比
         
-        let width = container.clientWidth;
+        // 可用高度需扣除顶部 HUD 与底部按钮栏，避免画布溢出
+        const header = document.getElementById('game-header');
+        const controls = document.getElementById('game-controls');
+        const chromeHeight = (header ? header.offsetHeight : 0) +
+                             (controls ? controls.offsetHeight : 0);
+        
+        const availWidth = container.clientWidth;
+        const availHeight = Math.max(0, container.clientHeight - chromeHeight);
+        
+        let width = availWidth;
         let height = width / aspectRatio;
         
-        if (height > container.clientHeight - 100) {
-            height = container.clientHeight - 100;
+        // 高度受限时按高度反推宽度，保证画布完整可见
+        if (height > availHeight) {
+            height = availHeight;
             width = height * aspectRatio;
+        }
+        
+        // 防止隐藏状态下算出 0/负值
+        if (!(width > 0) || !(height > 0)) {
+            width = 800;
+            height = 400;
         }
         
         this.canvas.width = 800; // 固定内部分辨率
         this.canvas.height = 400;
-        this.canvas.style.width = width + 'px';
-        this.canvas.style.height = height + 'px';
+        this.canvas.style.width = Math.floor(width) + 'px';
+        this.canvas.style.height = Math.floor(height) + 'px';
         
         this.width = 800;
         this.height = 400;
