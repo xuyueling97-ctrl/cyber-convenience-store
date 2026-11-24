@@ -4,13 +4,16 @@ class ShopSystem {
         this.money = 1000; // 初始资金
         this.reputation = 0; // 声誉
         this.level = 1; // 店铺等级
-        this.shelfSpace = 4; // 货架空间
+        this.shelfSpace = 4; // 货架空间：可同时上架的商品种类上限
         
         // 库存
         this.inventory = {};
         
         // 价格设置
         this.prices = {};
+        
+        // 已上架的商品（受 shelfSpace 限制）
+        this.shelved = [];
         
         // 统计
         this.stats = {
@@ -46,6 +49,47 @@ class ShopSystem {
             const product = GameData.products[id];
             this.prices[id] = product.basePrice;
         });
+        this.syncShelved();
+    }
+
+    // 货架容量：可同时上架的商品种类上限（由「扩展货架」升级提升）
+    getShelfCapacity() {
+        return this.shelfSpace;
+    }
+
+    // 是否已上架
+    isShelved(productId) {
+        return this.shelved.includes(productId);
+    }
+
+    // 上架/下架。返回是否操作成功（容量已满时上架失败）
+    setShelved(productId, on) {
+        if (!this.unlockedProducts.includes(productId)) {
+            return { success: false, message: '商品未解锁' };
+        }
+        if (on) {
+            if (this.isShelved(productId)) return { success: true };
+            if (this.shelved.length >= this.getShelfCapacity()) {
+                return { success: false, message: `货架已满（${this.shelved.length}/${this.getShelfCapacity()}），请先下架其他商品或购买「扩展货架」` };
+            }
+            this.shelved.push(productId);
+            return { success: true };
+        }
+        this.shelved = this.shelved.filter(id => id !== productId);
+        return { success: true };
+    }
+
+    // 校准上架列表：清理无效项，并自动补满空余货位
+    syncShelved() {
+        const capacity = this.getShelfCapacity();
+        this.shelved = (this.shelved || []).filter(id => this.unlockedProducts.includes(id));
+        if (this.shelved.length > capacity) {
+            this.shelved = this.shelved.slice(0, capacity);
+        }
+        for (const id of this.unlockedProducts) {
+            if (this.shelved.length >= capacity) break;
+            if (!this.shelved.includes(id)) this.shelved.push(id);
+        }
     }
 
     // 重置商店状态（用于新游戏）
@@ -57,6 +101,7 @@ class ShopSystem {
         this.inventory = {};
         this.prices = {};
         this.unlockedProducts = ['noodles', 'burger', 'onigiri', 'cola'];
+        this.shelved = [];
         this.upgradeEffects = {
             customerRate: 0,
             customerPatience: 0,
@@ -76,9 +121,9 @@ class ShopSystem {
         this.initInventory();
     }
 
-    // 获取可用商品
+    // 获取顾客可购买的商品（仅上架且有库存）
     getAvailableProducts() {
-        return this.unlockedProducts
+        return this.shelved
             .map(id => ({
                 ...GameData.products[id],
                 price: this.prices[id],
@@ -87,12 +132,13 @@ class ShopSystem {
             .filter(p => p.stock > 0);
     }
 
-    // 获取所有解锁商品（包括无库存）
+    // 获取所有已解锁商品（包括无库存、未上架），供库存面板使用
     getAllProducts() {
         return this.unlockedProducts.map(id => ({
             ...GameData.products[id],
             price: this.prices[id],
-            stock: this.inventory[id] || 0
+            stock: this.inventory[id] || 0,
+            shelved: this.isShelved(id)
         }));
     }
 
@@ -123,11 +169,16 @@ class ShopSystem {
         return { success: true, message: `进货成功：${product.name} x${quantity}` };
     }
 
-    // 销售商品
-    sellProduct(productId) {
+    // 销售商品。priceOverride 为顾客在货架前确认的成交价（缺省取当前售价）
+    sellProduct(productId, priceOverride) {
         if (this.inventory[productId] > 0) {
             this.inventory[productId]--;
-            const price = this.prices[productId];
+            const currentPrice = this.prices[productId];
+            // 取顾客确认价与当前售价的较小值：
+            // 玩家中途降价则按更低价成交，中途抬价也不会向顾客收取超出其预算的新价
+            const price = (typeof priceOverride === 'number')
+                ? Math.min(priceOverride, currentPrice)
+                : currentPrice;
             this.stats.totalIncome += price;
             this.stats.dayIncome += price;
             this.stats.totalSales++;
@@ -184,6 +235,7 @@ class ShopSystem {
                 this.prices[product.id] = product.basePrice;
             }
         });
+        this.syncShelved();
     }
 
     // 新的一天
@@ -215,6 +267,7 @@ class ShopSystem {
         this.unlockedProducts.push(productId);
         this.inventory[productId] = 5;
         this.prices[productId] = product.basePrice;
+        this.syncShelved();
         
         return { success: true, message: `解锁新商品：${product.name}` };
     }
@@ -229,6 +282,7 @@ class ShopSystem {
             inventory: { ...this.inventory },
             prices: { ...this.prices },
             unlockedProducts: [...this.unlockedProducts],
+            shelved: [...this.shelved],
             upgradeEffects: { ...this.upgradeEffects },
             stats: { ...this.stats }
         };
@@ -243,6 +297,7 @@ class ShopSystem {
         this.inventory = state.inventory || {};
         this.prices = state.prices || {};
         this.unlockedProducts = state.unlockedProducts || ['noodles', 'burger', 'onigiri', 'cola'];
+        this.shelved = Array.isArray(state.shelved) ? [...state.shelved] : [];
         this.upgradeEffects = state.upgradeEffects || {
             customerRate: 0,
             customerPatience: 0,
@@ -252,12 +307,15 @@ class ShopSystem {
             alienRate: 0
         };
         this.stats = state.stats || this.stats;
+        this.syncShelved();
     }
 
     // 应用升级效果
     applyUpgradeEffect(effect) {
         if (effect.shelfSpace) {
             this.shelfSpace += effect.shelfSpace;
+            // 扩容后立即把新解锁但未上架的商品自动补上货架
+            this.syncShelved();
         }
         // 其余持续效果累加，供顾客系统/事件系统查询
         ['customerRate', 'customerPatience', 'checkoutSpeed',

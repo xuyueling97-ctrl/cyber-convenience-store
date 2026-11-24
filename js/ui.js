@@ -68,20 +68,29 @@ class UISystem {
     // 显示库存面板
     showInventoryPanel() {
         const products = Shop.getAllProducts();
+        const capacity = Shop.getShelfCapacity();
+        const shelvedCount = Shop.shelved.length;
         
-        let content = '<div class="item-list">';
+        let content = `<p style="margin: 0 0 12px; color: #88ffff; font-size: 0.9em;">
+            🧺 货架位：${shelvedCount}/${capacity}　（只有已上架的商品顾客才会购买，升级「扩展货架」可增加货位）
+        </p>`;
+        content += '<div class="item-list">';
         
         products.forEach(product => {
             const profit = product.price - product.baseCost;
             const profitColor = profit > 0 ? '#00ff00' : '#ff0000';
+            const shelfBtnLabel = product.shelved ? '下架' : '上架';
+            const shelfBtnColor = product.shelved ? '#ffaa00' : '#00ff00';
             
             content += `
-                <div class="item-card">
+                <div class="item-card${product.shelved ? '' : ' unshelved'}">
                     <div class="item-info">
                         <div class="item-icon">${product.icon}</div>
                         <div>
-                            <div class="item-name">${product.name}</div>
-                            <div class="item-desc">库存: ${product.stock} | 成本: ¥${product.baseCost}</div>
+                            <div class="item-name">${product.name}
+                                ${product.shelved ? '<span class="shelf-tag">货架中</span>' : '<span class="shelf-tag off">未上架</span>'}
+                            </div>
+                            <div class="item-desc">库存: ${product.stock} | 成本: ¥${product.baseCost} | 利润: <span style="color:${profitColor}">¥${profit}</span></div>
                         </div>
                     </div>
                     <div class="item-actions">
@@ -90,6 +99,8 @@ class UISystem {
                         <button class="item-btn" onclick="UI.setPrice('${product.id}')">定价</button>
                         <button class="item-btn" onclick="UI.buyProduct('${product.id}', 5)">+5</button>
                         <button class="item-btn" onclick="UI.buyProduct('${product.id}', 10)">+10</button>
+                        <button class="item-btn" style="color:${shelfBtnColor}" 
+                            onclick="UI.toggleShelf('${product.id}')">${shelfBtnLabel}</button>
                     </div>
                 </div>
             `;
@@ -101,6 +112,20 @@ class UISystem {
         </p>`;
         
         this.showModal('📦 库存管理', content);
+    }
+
+    // 上架 / 下架切换
+    toggleShelf(productId) {
+        const on = !Shop.isShelved(productId);
+        const result = Shop.setShelved(productId, on);
+        
+        if (result.success) {
+            this.showNotification(on ? '已上架' : '已下架', 'success');
+            this.showInventoryPanel(); // 刷新面板
+        } else {
+            this.showNotification(result.message, 'error');
+            Audio.playError();
+        }
     }
 
     // 设置价格

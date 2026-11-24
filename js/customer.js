@@ -35,25 +35,33 @@ class CustomerSystem {
     }
 
     update(deltaTime, shop) {
+        // 顾客行为跟随游戏速度：否则 3 倍速下只有时间加速、客流不变，每天顾客反而变少
+        const gameDelta = (deltaTime || 0) * (Time.speed || 1);
+        
         // 生成新顾客（考虑事件、停电与升级效果）
-        this.spawnTimer++;
+        // 计时用真实时间累积而非帧计数：低帧率时不会漏算，出客节奏稳定
+        this.spawnTimer += gameDelta;
         const rateModifier = Events.getEffectModifier('customerRate');
         const upgradeRate = 1 + shop.getUpgradeEffect('customerRate');
-        const effectiveSpawnRate = Utils.clamp(this.spawnRate * rateModifier * upgradeRate, 0, 0.95);
+        // 店里一位顾客都没有时略微提高出客率，缩短前期与空店时的干等
+        const emptyBoost = this.customers.length === 0 ? 1.8 : 1;
+        const effectiveSpawnRate = Utils.clamp(
+            this.spawnRate * rateModifier * upgradeRate * emptyBoost, 0, 0.95);
         
-        if (!this.noPower 
-            && this.spawnTimer >= this.spawnInterval 
-            && this.customers.length < this.maxCustomers) {
-            if (Utils.chance(effectiveSpawnRate)) {
-                this.spawnCustomer(shop);
-            }
+        // 每秒判定一次“是否来客”，effectiveSpawnRate 即每秒概率
+        if (this.spawnTimer >= 1000) {
             this.spawnTimer = 0;
+            if (!this.noPower && this.customers.length < this.maxCustomers) {
+                if (Utils.chance(effectiveSpawnRate)) {
+                    this.spawnCustomer(shop);
+                }
+            }
         }
         
-        // 更新所有顾客
+        // 更新所有顾客（行为节奏跟随游戏速度，与时间流逝保持一致）
         for (let i = this.customers.length - 1; i >= 0; i--) {
             const customer = this.customers[i];
-            this.updateCustomer(customer, deltaTime, shop);
+            this.updateCustomer(customer, gameDelta, shop);
             
             // 移除离开的顾客
             if (customer.state === 'leaving' && customer.x > 800) {
@@ -144,14 +152,18 @@ class CustomerSystem {
         const count = Utils.randomInt(1, Math.min(3, preferred.length || availableProducts.length));
         const pool = preferred.length > 0 ? preferred : availableProducts;
         
+        // 用局部额度做筛选，不改动 customer.budget：
+        // budget 只在实际成交时扣减，避免预扣与成交各扣一次导致顾客预算凭空减半
+        let remaining = customer.budget;
+        
         for (let i = 0; i < count && pool.length > 0; i++) {
             const index = Utils.randomInt(0, pool.length - 1);
             const product = pool[index];
             
             // 检查预算
-            if (product.price <= customer.budget) {
+            if (product.price <= remaining) {
                 customer.wantedProducts.push(product);
-                customer.budget -= product.price;
+                remaining -= product.price;
             }
             
             pool.splice(index, 1);
@@ -159,12 +171,15 @@ class CustomerSystem {
     }
 
     updateCustomer(customer, deltaTime, shop) {
-        customer.stateTimer++;
+        // 状态计时按时间速度缩放，与时间流逝同步
+        customer.stateTimer += (Time.speed || 1);
         
         // 更新耐心值（结账后不再减少）
         if (customer.state !== 'leaving' && customer.state !== 'entering' 
             && customer.state !== 'waiting') {
-            customer.patience -= 0.1;
+            // 以时间衰减（每秒 6 点）。deltaTime 已按时间速度缩放，
+            // 因此 3 倍速下顾客耐心也按 3 倍游戏时间消耗，不会“变相更耐等”
+            customer.patience -= 6 * ((deltaTime || 16) / 1000);
             
             if (customer.patience <= 0) {
                 this.makeCustomerAngry(customer);
@@ -196,14 +211,19 @@ class CustomerSystem {
         
         // 更新对话
         if (customer.dialogTimer > 0) {
-            customer.dialogTimer--;
+            customer.dialogTimer -= (Time.speed || 1);
         }
+    }
+
+    // 顾客移动步长：基础速度 × 时间倍率，让加速时顾客也同步走快
+    step(customer, factor = 1) {
+        return customer.speed * factor * (Time.speed || 1);
     }
 
     updateEntering(customer) {
         // 移动到店内
         if (customer.x < customer.targetX) {
-            customer.x += customer.speed;
+            customer.x += this.step(customer);
         } else {
             customer.state = 'browsing';
             customer.targetX = Utils.pick([
@@ -222,8 +242,8 @@ class CustomerSystem {
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist > 5) {
-            customer.x += (dx / dist) * customer.speed;
-            customer.y += (dy / dist) * customer.speed;
+            customer.x += (dx / dist) * this.step(customer);
+            customer.y += (dy / dist) * this.step(customer);
         } else {
             // 到达货架，考虑购买
             this.tryPurchaseAtShelf(customer, shop);
@@ -258,8 +278,8 @@ class CustomerSystem {
             ? shop.prices[product.id] : product.price;
         
         if (stock > 0 && currentPrice <= customer.budget) {
-            // 购买商品
-            customer.purchasedProducts.push(product);
+            // 购买商品：记录成交时的真实售价，供结算与详情显示使用
+            customer.purchasedProducts.push({ ...product, price: currentPrice });
             customer.wantedProducts.shift();
             customer.budget -= currentPrice;
             
@@ -279,8 +299,8 @@ class CustomerSystem {
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist > 5) {
-            customer.x += (dx / dist) * customer.speed;
-            customer.y += (dy / dist) * customer.speed;
+            customer.x += (dx / dist) * this.step(customer);
+            customer.y += (dy / dist) * this.step(customer);
         } else {
             customer.state = 'checkout';
             customer.stateTimer = 0;
@@ -304,7 +324,7 @@ class CustomerSystem {
 
     // 更新等待状态（显示购买后情绪）
     updateWaiting(customer) {
-        customer.emotionTimer--;
+        customer.emotionTimer -= (Time.speed || 1);
         if (customer.emotionTimer <= 0) {
             customer.state = 'leaving';
             customer.targetX = this.waypoints.exit.x + 100;
@@ -321,8 +341,8 @@ class CustomerSystem {
         
         let total = 0;
         customer.purchasedProducts.forEach(product => {
-            // 以结算时的实际售价计费，与 Shop.stats 保持一致
-            total += shop.sellProduct(product.id);
+            // 以顾客在货架前确认的成交价结算，保证与预算扣减、UI 展示三者一致
+            total += shop.sellProduct(product.id, product.price);
         });
         
         shop.addMoney(total);
@@ -354,7 +374,7 @@ class CustomerSystem {
 
     updateLeaving(customer) {
         if (customer.x < customer.targetX) {
-            customer.x += customer.speed * 1.5;
+            customer.x += this.step(customer, 1.5);
         }
     }
 

@@ -194,11 +194,12 @@ class RendererSystem {
     }
 
     drawShelves() {
-        const products = Shop.getAllProducts();
+        // 只画已上架商品，按货架容量在 3 个货架之间均匀分配
+        const products = Shop.getAvailableProducts();
+        const shelfCount = this.scene.shelves.length;
         
         this.scene.shelves.forEach((shelf, index) => {
-            // 分配商品到货架
-            const shelfProducts = products.slice(index * 4, (index + 1) * 4);
+            const shelfProducts = products.filter((_, i) => i % shelfCount === index);
             Sprites.drawShelf(this.ctx, shelf.x, shelf.y, shelf.width, shelf.height, 
                 shelfProducts, Shop.level);
         });
