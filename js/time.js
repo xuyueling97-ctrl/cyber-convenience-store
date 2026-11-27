@@ -120,7 +120,8 @@ class TimeSystem {
 
     // 加载状态
     loadState(state) {
-        this.gameTime = Number.isFinite(state.gameTime) ? state.gameTime : 360;
+        const time = state.gameTime;
+        this.gameTime = Number.isFinite(time) && time >= 0 && time < 1440 ? time : 360;
         this.day = state.day || 1;
         this.speed = state.speed || 1;
         this.paused = state.paused || false;

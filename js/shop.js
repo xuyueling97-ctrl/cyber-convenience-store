@@ -82,7 +82,7 @@ class ShopSystem {
     // 校准上架列表：清理无效项，并自动补满空余货位
     syncShelved(fillEmpty = true) {
         const capacity = this.getShelfCapacity();
-        this.shelved = (this.shelved || []).filter(id => this.unlockedProducts.includes(id));
+        this.shelved = [...new Set((this.shelved || []).filter(id => this.unlockedProducts.includes(id)))];
         if (this.shelved.length > capacity) {
             this.shelved = this.shelved.slice(0, capacity);
         }
@@ -291,7 +291,7 @@ class ShopSystem {
 
     // 加载状态
     loadState(state) {
-        this.money = Number.isFinite(state.money) ? state.money : 1000;
+        this.money = Number.isFinite(state.money) ? Math.max(0, state.money) : 1000;
         this.reputation = state.reputation || 0;
         this.level = state.level || 1;
         this.shelfSpace = state.shelfSpace || 4;
