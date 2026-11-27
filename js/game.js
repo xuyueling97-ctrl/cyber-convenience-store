@@ -128,7 +128,7 @@ class Game {
         UI.updateHeader();
         // 画面可见后重算画布尺寸（此前容器 display:none，尺寸为 0）
         Renderer.resize();
-        this.resetPauseButton();
+        this.syncPauseButton();
 
         // 开始游戏循环
         this.startGameLoop();
@@ -158,7 +158,7 @@ class Game {
         UI.updateHeader();
         // 画面可见后重算画布尺寸
         Renderer.resize();
-        this.resetPauseButton();
+        this.syncPauseButton();
 
         // 开始游戏循环
         this.startGameLoop();
@@ -387,17 +387,16 @@ class Game {
         UI.showEnding(ending);
     }
 
-    // 复位暂停按钮文案（新游戏/读档后调用）
-    resetPauseButton() {
+    // 新游戏、读档和切换暂停后同步按钮文案。
+    syncPauseButton() {
         const btn = document.getElementById('btn-pause');
-        if (btn) btn.textContent = '⏸️ 暂停';
+        if (btn) btn.textContent = Time.paused ? '▶️ 继续' : '⏸️ 暂停';
     }
 
     // 切换暂停
     togglePause() {
         const paused = Time.togglePause();
-        const btn = document.getElementById('btn-pause');
-        btn.textContent = paused ? '▶️ 继续' : '⏸️ 暂停';
+        this.syncPauseButton();
 
         if (paused) {
             UI.showNotification('⏸️ 游戏已暂停', 'info');

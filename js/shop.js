@@ -80,12 +80,13 @@ class ShopSystem {
     }
 
     // 校准上架列表：清理无效项，并自动补满空余货位
-    syncShelved() {
+    syncShelved(fillEmpty = true) {
         const capacity = this.getShelfCapacity();
         this.shelved = (this.shelved || []).filter(id => this.unlockedProducts.includes(id));
         if (this.shelved.length > capacity) {
             this.shelved = this.shelved.slice(0, capacity);
         }
+        if (!fillEmpty) return;
         for (const id of this.unlockedProducts) {
             if (this.shelved.length >= capacity) break;
             if (!this.shelved.includes(id)) this.shelved.push(id);
@@ -290,14 +291,15 @@ class ShopSystem {
 
     // 加载状态
     loadState(state) {
-        this.money = state.money || 1000;
+        this.money = Number.isFinite(state.money) ? state.money : 1000;
         this.reputation = state.reputation || 0;
         this.level = state.level || 1;
         this.shelfSpace = state.shelfSpace || 4;
         this.inventory = state.inventory || {};
         this.prices = state.prices || {};
         this.unlockedProducts = state.unlockedProducts || ['noodles', 'burger', 'onigiri', 'cola'];
-        this.shelved = Array.isArray(state.shelved) ? [...state.shelved] : [];
+        const hasSavedShelves = Array.isArray(state.shelved);
+        this.shelved = hasSavedShelves ? [...state.shelved] : [];
         this.upgradeEffects = state.upgradeEffects || {
             customerRate: 0,
             customerPatience: 0,
@@ -307,7 +309,7 @@ class ShopSystem {
             alienRate: 0
         };
         this.stats = state.stats || this.stats;
-        this.syncShelved();
+        this.syncShelved(!hasSavedShelves);
     }
 
     // 应用升级效果
